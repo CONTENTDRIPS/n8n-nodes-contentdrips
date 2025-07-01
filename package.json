@@ -1,6 +1,6 @@
 {
-  "name": "n8n-nodes-contentdrips",
-  "version": "1.0.0",
+  "name": "contentdrips-n8n",
+  "version": "1.0.2",
   "description": "n8n node for Contentdrips API - create carousels and static graphics for social media content automation",
   "keywords": [
     "n8n-community-node-package",
@@ -12,14 +12,11 @@
     "automation"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/yourusername/n8n-nodes-contentdrips",
-  "author": {
-    "name": "Your Name",
-    "email": "your.email@example.com"
-  },
+  "homepage": "https://github.com/CONTENTDRIPS/contentdrips-n8n",
+  "author": "Contentdrips <hello@contentdrips.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/n8n-nodes-contentdrips.git"
+    "url": "git+https://github.com/CONTENTDRIPS/contentdrips-n8n.git"
   },
   "engines": {
     "node": ">=18.17.0"
@@ -48,7 +45,8 @@
   },
   "devDependencies": {
     "@types/node": "^18.17.0",
-    "@typescript-eslint/parser": "^5.45.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "copyfiles": "^2.4.1",
     "eslint": "^8.29.0",
     "n8n-workflow": "~1.82.0",
@@ -56,5 +54,8 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/n8n-nodes-contentdrips/issues"
   }
-} 
+}
