@@ -136,25 +136,79 @@ This our a response from API will look.
     "estimated_time": "2-5 minutes",
     "check_status_url": "/job/15bf4a39-876a-4780-aaa9-4be6fe2c61b4/status"
 }
+
+Generation Response Examples
+✅ Success Response (202 Accepted):
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "queued",
+ "message": "Job has been queued for processing",
+ "estimated_time": "2-5 minutes",
+ "check_status_url": "/job/5844c4b4-dd6d-4b60-8d0f-e3818043fb11/status"
+}
+❌ Bad Request (400):
+{
+ "error": "Validation error",
+ "message": "template_id is required"
+}
+🔒 Unauthorized (401):
+{
+ "error": "Unauthorized",
+ "message": "Invalid or missing Bearer token"
+}
+⚠️ Server Error (500):
+{
+ "error": "Failed to queue job",
+ "message": "Redis connection failed"
+}
+
+
 Getting output from job ID
 To get a output using your job ID. You enter hit a request to this URL
 
 https://generate.contentdrips.com/job/{job_id}/result
 When job is under process, it will respond with this data
 
+Job Result Response Examples
+📝 Job Result When Pending (/result endpoint):
 {
-    "job_id": "4d05ffcd-6abc-4c7b-b439-044b7f6846c6",
-    "status": "processing",
-    "message": "Job not yet completed",
-    "check_again_in": "30 seconds"
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "processing",
+ "message": "Job not yet completed",
+ "check_again_in": "30 seconds"
 }
-When job is completed, it will respond with this data
+✅ Job Result When Completed (/result endpoint):
+Single Image:
+{
+ "date": "2024-01-15T10:35:00.000Z",
+ "type": "normal",
+ "export_url": "https://your-bucket.s3.amazonaws.com/.../template.png"
+}
+Carousel PDF:
+{
+ "date": "2024-01-15T10:35:00.000Z",
+ "type": "carousel",
+ "export_url": "https://your-bucket.s3.amazonaws.com/.../carousel.pdf"
+}
+Carousel PNG Array:
+{
+ "date": "2024-01-15T10:35:00.000Z",
+ "type": "carousel",
+ "export_url": [
+   "https://your-bucket.s3.amazonaws.com/.../frame-0.png",
+   "https://your-bucket.s3.amazonaws.com/.../frame-1.png",
+   "https://your-bucket.s3.amazonaws.com/.../frame-2.png"
+ ]
+}
+❌ When Job has Failed:
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "failed",
+ "message": "Template not found or processing error occurred",
+ "error_details": "Invalid template ID provided"
+}
 
-{
-    "date": "2025-06-02T16:31:18.633Z",
-    "type": "carousel",
-    "export_url": "https://contentdrips2.s3.amazonaws.com/server/104017/uploads/blpylo-carousel-output.pdf"
-}
+
 Get status of a job
 Once you submit a render job, you receive a job ID and against that job ID you can check for its status using this endpoint
 
@@ -177,6 +231,44 @@ When a job is not finished it will return the data as
     "updatedAt": "2025-06-02T16:44:08.840Z",
     "startedAt": "2025-06-02T16:44:08.840Z"
 }
+
+Job Status Response Examples
+📊 Job Status Response (/status endpoint):
+Queued:
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "queued",
+ "updated_at": "2024-01-15T10:30:00.000Z",
+ "startedAt": null,
+ "progress": "Job is waiting in queue"
+}
+Processing:
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "processing",
+ "updated_at": "2024-01-15T10:32:00.000Z",
+ "startedAt": "2024-01-15T10:32:00.000Z",
+ "progress": "Loading fonts and templates"
+}
+Completed:
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "completed",
+ "updated_at": "2024-01-15T10:35:00.000Z",
+ "startedAt": "2024-01-15T10:32:00.000Z",
+ "progress": "Job completed successfully"
+}
+Failed:
+{
+ "job_id": "5844c4b4-dd6d-4b60-8d0f-e3818043fb11",
+ "status": "failed",
+ "updated_at": "2024-01-15T10:33:00.000Z",
+ "startedAt": "2024-01-15T10:32:00.000Z",
+ "progress": "Error: Template not found",
+ "error_details": "Invalid template ID provided"
+}
+
+
 Use Cases
 This API is useful when you want to automate or bulk-generate content. Some examples:
 
@@ -184,9 +276,6 @@ Convert blog posts into carousel posts
 Create daily quote or tip posts with Make or Zapier
 Auto-generate testimonials or case studies from form responses
 Build your own mini-content tool powered by this API
-Pricing
-Plan	Price/mo	API Calls
-Starter	$25	250
-Advance	$50	600
+
 Final Note
 The Contentdrips API gives you full control over content creation. It works with your tools, your data, and your flow. Whether you’re a solo creator, dev team, or agency — you can now scale design without touching the editor. Try it today by creating your API token from your dashboard.
