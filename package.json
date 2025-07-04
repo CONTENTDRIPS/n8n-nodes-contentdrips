@@ -1,6 +1,6 @@
 {
   "name": "contentdrips-n8n",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "n8n node for Contentdrips API - create carousels and static graphics for social media content automation",
   "keywords": [
     "n8n-community-node-package",
@@ -56,6 +56,6 @@
     "n8n-workflow": "*"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/n8n-nodes-contentdrips/issues"
+    "url": "https://github.com/CONTENTDRIPS/contentdrips-n8n/issues"
   }
 }
