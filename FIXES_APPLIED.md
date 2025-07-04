@@ -115,4 +115,52 @@ When you build/test this node:
 
 All operations now use proper n8n parameter types and should compile without TypeScript errors.
 
-The node is now fully compliant with n8n's type system and ready for testing/deployment! 
+The node is now fully compliant with n8n's type system and ready for testing/deployment!
+
+---
+
+## 🚀 **CRITICAL UPDATE: n8n Naming Convention Compliance**
+
+### ❌ **Problem**: Package Name Non-Compliance
+**Error**: `npm error 404 'n8n-nodes-contentdrips@latest' is not in this registry`
+
+**Root Cause**: 
+- Package was named `contentdrips-n8n` 
+- n8n community standard requires packages to start with `n8n-nodes-`
+- Users expected package to be named `n8n-nodes-contentdrips`
+
+### ✅ **Solution**: Complete Package Rename
+
+**Changes Applied**:
+- ✅ **Package name**: `contentdrips-n8n` → `n8n-nodes-contentdrips`
+- ✅ **Version reset**: `1.0.4` → `1.0.0` (new package)
+- ✅ **README.md**: Updated all installation instructions
+- ✅ **Repository URLs**: Updated GitHub links to match new naming
+- ✅ **Documentation**: Updated title and all references
+
+### 📦 **Migration Guide**
+
+**For New Users:**
+```bash
+npm install n8n-nodes-contentdrips
+```
+
+**Community Nodes Installation:**
+1. Go to **Settings > Community Nodes** in n8n
+2. Click **Install a community node**  
+3. Enter `n8n-nodes-contentdrips`
+4. Click **Install**
+
+### 🔧 **Publishing Steps**
+
+1. **Run publish script**: `./publish.sh`
+2. **Publish to npm**: `npm publish`
+3. **Update GitHub repo name** (optional): Rename to `n8n-nodes-contentdrips`
+
+### 📋 **Files Updated**
+- ✅ `package.json` - name, URLs, version
+- ✅ `README.md` - title, installation instructions  
+- ✅ `publish.sh` - automated publishing script
+- ✅ `FIXES_APPLIED.md` - this documentation
+
+**Status**: Ready for republishing with correct n8n naming convention! 🎉 

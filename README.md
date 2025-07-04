@@ -1,4 +1,4 @@
-# contentdrips-n8n
+# n8n-nodes-contentdrips
 
 An n8n community node for the [Contentdrips API](https://app.contentdrips.com) that enables you to create carousels and static graphics for social media content automation.
 
@@ -17,7 +17,7 @@ An n8n community node for the [Contentdrips API](https://app.contentdrips.com) t
 
 1. Go to **Settings > Community Nodes** in your n8n instance
 2. Click **Install a community node**
-3. Enter `contentdrips-n8n`
+3. Enter `n8n-nodes-contentdrips`
 4. Click **Install**
 
 ### Manual Installation
@@ -27,7 +27,7 @@ An n8n community node for the [Contentdrips API](https://app.contentdrips.com) t
 cd ~/.n8n
 
 # Install the node
-npm install contentdrips-n8n
+npm install n8n-nodes-contentdrips
 ```
 
 ## Prerequisites
