@@ -1,6 +1,7 @@
 import {
 	ICredentialType,
 	INodeProperties,
+	ICredentialTestRequest,
 } from 'n8n-workflow';
 
 export class ContentdripsApi implements ICredentialType {
@@ -19,5 +20,11 @@ export class ContentdripsApi implements ICredentialType {
 		},
 	];
 
-
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://generate.contentdrips.com',
+			url: '/render',
+			method: 'POST',
+		},
+	};
 } 
