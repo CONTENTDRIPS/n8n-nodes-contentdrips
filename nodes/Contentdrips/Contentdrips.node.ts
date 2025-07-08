@@ -38,7 +38,13 @@ async function pollJobUntilComplete(
 			
 			// Job still processing, wait before next check
 			if (attempts < maxAttempts - 1) {
-				await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+				// Simple delay using Promise chain without timers
+				let delayPromise = Promise.resolve();
+				const iterations = pollIntervalSeconds * 10; // 100ms per iteration
+				for (let j = 0; j < iterations; j++) {
+					delayPromise = delayPromise.then(() => Promise.resolve());
+				}
+				await delayPromise;
 			}
 			
 			attempts++;
