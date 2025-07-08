@@ -13,9 +13,50 @@ import {
 
 import { contentdripsApiRequest } from './GenericFunctions';
 
+// Helper function to poll job status until completion
+async function pollJobUntilComplete(
+	context: IExecuteFunctions,
+	jobId: string,
+	pollIntervalSeconds: number = 30,
+	maxWaitTimeMinutes: number = 10
+): Promise<any> {
+	const maxAttempts = Math.ceil((maxWaitTimeMinutes * 60) / pollIntervalSeconds);
+	let attempts = 0;
+
+	while (attempts < maxAttempts) {
+		try {
+			// Check job status
+			const statusResponse = await contentdripsApiRequest.call(context, 'GET', `/job/${jobId}/status`);
+			
+			if (statusResponse.status === 'completed') {
+				// Job completed, get the result
+				const resultResponse = await contentdripsApiRequest.call(context, 'GET', `/job/${jobId}/result`);
+				return resultResponse;
+			} else if (statusResponse.status === 'failed' || statusResponse.status === 'error') {
+				throw new NodeOperationError(context.getNode(), `Job failed: ${statusResponse.message || 'Unknown error'}`);
+			}
+			
+			// Job still processing, wait before next check
+			if (attempts < maxAttempts - 1) {
+				await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+			}
+			
+			attempts++;
+		} catch (error) {
+			if (error instanceof NodeOperationError) {
+				throw error;
+			}
+			throw new NodeOperationError(context.getNode(), `Error polling job status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		}
+	}
+	
+	throw new NodeOperationError(context.getNode(), `Job timeout: Job ${jobId} did not complete within ${maxWaitTimeMinutes} minutes`);
+}
+
 export class Contentdrips implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Contentdrips',
+		icon: 'file:contentdrips.png',
 		name: 'contentdrips',
 		group: ['transform'],
 		version: 1,
@@ -42,14 +83,26 @@ export class Contentdrips implements INodeType {
 					{
 						name: 'Generate Graphic',
 						value: 'generateGraphic',
-						description: 'Create a static graphic from a template',
-						action: 'Generate a static graphic from a template',
+						description: 'Start creating a graphic and get a job ID to check later',
+						action: 'Start creating a graphic and get a job ID to check later',
+					},
+					{
+						name: '1-Click Generate Graphic',
+						value: 'generateGraphicSync',
+						description: 'Create a graphic in one step - we handle everything automatically',
+						action: 'Create a graphic in one step - we handle everything automatically',
 					},
 					{
 						name: 'Generate Carousel',
 						value: 'generateCarousel',
-						description: 'Create a multi-slide carousel',
-						action: 'Generate a multi-slide carousel',
+						description: 'Start creating a carousel and get a job ID to check later',
+						action: 'Start creating a carousel and get a job ID to check later',
+					},
+					{
+						name: '1-Click Generate Carousel',
+						value: 'generateCarouselSync',
+						description: 'Create a carousel in one step - we handle everything automatically',
+						action: 'Create a carousel in one step - we handle everything automatically',
 					},
 					{
 						name: 'Check Job Status',
@@ -74,7 +127,7 @@ export class Contentdrips implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel'],
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
 					},
 				},
 				default: '',
@@ -90,7 +143,7 @@ export class Contentdrips implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel'],
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
 					},
 				},
 				options: [
@@ -107,6 +160,44 @@ export class Contentdrips implements INodeType {
 				description: 'The output format for the generated content',
 			},
 
+			// Wait settings for operations that wait for results
+			{
+				displayName: 'Wait Settings',
+				name: 'pollingConfig',
+				type: 'collection',
+				displayOptions: {
+					show: {
+						operation: ['generateGraphicSync', 'generateCarouselSync'],
+					},
+				},
+				placeholder: 'Customize Wait Settings',
+				default: {},
+				options: [
+					{
+						displayName: 'Check Every (seconds)',
+						name: 'pollInterval',
+						type: 'number',
+						default: 30,
+						description: 'How often to check if your content is ready (in seconds)',
+						typeOptions: {
+							minValue: 5,
+							maxValue: 300,
+						},
+					},
+					{
+						displayName: 'Give Up After (minutes)',
+						name: 'maxWaitTime',
+						type: 'number',
+						default: 10,
+						description: 'Stop waiting and show an error after this many minutes',
+						typeOptions: {
+							minValue: 1,
+							maxValue: 60,
+						},
+					},
+				],
+			},
+
 			// Include Branding Toggle
 			{
 				displayName: 'Include Branding',
@@ -114,7 +205,7 @@ export class Contentdrips implements INodeType {
 				type: 'boolean',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel'],
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
 					},
 				},
 				default: false,
@@ -128,7 +219,7 @@ export class Contentdrips implements INodeType {
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel'],
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
 						includeBranding: [true],
 					},
 				},
@@ -174,14 +265,39 @@ export class Contentdrips implements INodeType {
 				],
 			},
 
-			// Content Updates
+			// Content Updates Input Mode
+			{
+				displayName: 'Content Updates Input',
+				name: 'contentUpdatesMode',
+				type: 'options',
+				displayOptions: {
+					show: {
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+					},
+				},
+				options: [
+					{
+						name: 'Use Form (Easy)',
+						value: 'form',
+					},
+					{
+						name: 'Use JSON (Advanced)',
+						value: 'json',
+					},
+				],
+				default: 'form',
+				description: 'Choose how to provide content updates',
+			},
+
+			// Content Updates - Form Mode
 			{
 				displayName: 'Content Updates',
 				name: 'contentUpdates',
 				type: 'fixedCollection',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel'],
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						contentUpdatesMode: ['form'],
 					},
 				},
 				placeholder: 'Add Content Update',
@@ -232,14 +348,55 @@ export class Contentdrips implements INodeType {
 				],
 			},
 
-			// Carousel - Intro Slide
+			// Content Updates - JSON Mode
+			{
+				displayName: 'Content Updates JSON',
+				name: 'contentUpdatesJson',
+				type: 'json',
+				displayOptions: {
+					show: {
+						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						contentUpdatesMode: ['json'],
+					},
+				},
+				default: '[\n  {\n    "type": "textbox",\n    "label": "title",\n    "value": "My Custom Title"\n  },\n  {\n    "type": "image",\n    "label": "background",\n    "value": "https://example.com/image.jpg"\n  }\n]',
+				description: 'Content updates as JSON array. Each object should have: type, label, and value',
+				placeholder: 'Enter content updates as JSON...',
+			},
+
+			// Carousel Input Mode
+			{
+				displayName: 'Carousel Input',
+				name: 'carouselMode',
+				type: 'options',
+				displayOptions: {
+					show: {
+						operation: ['generateCarousel', 'generateCarouselSync'],
+					},
+				},
+				options: [
+					{
+						name: 'Use Form (Easy)',
+						value: 'form',
+					},
+					{
+						name: 'Use JSON (Advanced)',
+						value: 'json',
+					},
+				],
+				default: 'form',
+				description: 'Choose how to provide carousel data',
+			},
+
+			// Carousel - Form Mode - Intro Slide
 			{
 				displayName: 'Intro Slide',
 				name: 'introSlide',
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel'],
+						operation: ['generateCarousel', 'generateCarouselSync'],
+						carouselMode: ['form'],
 					},
 				},
 				placeholder: 'Add Intro Slide',
@@ -269,14 +426,15 @@ export class Contentdrips implements INodeType {
 				],
 			},
 
-			// Carousel - Content Slides
+			// Carousel - Form Mode - Content Slides
 			{
 				displayName: 'Slides',
 				name: 'slides',
 				type: 'fixedCollection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel'],
+						operation: ['generateCarousel', 'generateCarouselSync'],
+						carouselMode: ['form'],
 					},
 				},
 				placeholder: 'Add Slide',
@@ -315,14 +473,15 @@ export class Contentdrips implements INodeType {
 				],
 			},
 
-			// Carousel - Ending Slide
+			// Carousel - Form Mode - Ending Slide
 			{
 				displayName: 'Ending Slide',
 				name: 'endingSlide',
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel'],
+						operation: ['generateCarousel', 'generateCarouselSync'],
+						carouselMode: ['form'],
 					},
 				},
 				placeholder: 'Add Ending Slide',
@@ -350,6 +509,22 @@ export class Contentdrips implements INodeType {
 						description: 'Image URL for the ending slide',
 					},
 				],
+			},
+
+			// Carousel - JSON Mode
+			{
+				displayName: 'Carousel JSON',
+				name: 'carouselJson',
+				type: 'json',
+				displayOptions: {
+					show: {
+						operation: ['generateCarousel', 'generateCarouselSync'],
+						carouselMode: ['json'],
+					},
+				},
+				default: '{\n  "intro_slide": {\n    "heading": "Welcome",\n    "description": "This is the intro slide",\n    "image": "https://example.com/intro.jpg"\n  },\n  "slides": [\n    {\n      "heading": "Slide 1",\n      "description": "Content for slide 1",\n      "image": "https://example.com/slide1.jpg"\n    },\n    {\n      "heading": "Slide 2",\n      "description": "Content for slide 2",\n      "image": "https://example.com/slide2.jpg"\n    }\n  ],\n  "ending_slide": {\n    "heading": "Thank You",\n    "description": "This is the ending slide",\n    "image": "https://example.com/ending.jpg"\n  }\n}',
+				description: 'Complete carousel data as JSON. Include intro_slide, slides array, and ending_slide',
+				placeholder: 'Enter carousel data as JSON...',
 			},
 
 			// Job Status/Result Options
@@ -380,11 +555,11 @@ export class Contentdrips implements INodeType {
 			try {
 				let responseData: any;
 
-				if (operation === 'generateGraphic') {
+				if (operation === 'generateGraphic' || operation === 'generateGraphicSync') {
 					const templateId = this.getNodeParameter('templateId', i) as string;
 					const output = this.getNodeParameter('output', i) as string;
 					const includeBranding = this.getNodeParameter('includeBranding', i) as boolean;
-					const contentUpdates = this.getNodeParameter('contentUpdates', i) as IDataObject;
+					const contentUpdatesMode = this.getNodeParameter('contentUpdatesMode', i) as string;
 
 					const body: IDataObject = {
 						template_id: templateId,
@@ -399,21 +574,54 @@ export class Contentdrips implements INodeType {
 						}
 					}
 
-					// Add content updates
-					if (contentUpdates && contentUpdates.updates) {
-						body.content_update = contentUpdates.updates;
+					// Add content updates based on selected mode
+					if (contentUpdatesMode === 'json') {
+						const contentUpdatesJson = this.getNodeParameter('contentUpdatesJson', i) as string;
+						if (contentUpdatesJson && contentUpdatesJson.trim()) {
+							try {
+								const parsedUpdates = JSON.parse(contentUpdatesJson);
+								if (Array.isArray(parsedUpdates) && parsedUpdates.length > 0) {
+									body.content_update = parsedUpdates;
+								}
+							} catch (error) {
+								throw new NodeOperationError(this.getNode(), `Invalid Content Updates JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+							}
+						}
+					} else {
+						// Form mode
+						const contentUpdates = this.getNodeParameter('contentUpdates', i) as IDataObject;
+						if (contentUpdates && contentUpdates.updates) {
+							body.content_update = contentUpdates.updates;
+						}
 					}
 
-					responseData = await contentdripsApiRequest.call(this, 'POST', '/render', body);
+					// Make the initial API call
+					const initialResponse = await contentdripsApiRequest.call(this, 'POST', '/render', body);
 
-				} else if (operation === 'generateCarousel') {
+					if (operation === 'generateGraphicSync') {
+						// Get polling configuration
+						const pollingConfig = this.getNodeParameter('pollingConfig', i, {}) as IDataObject;
+						const pollInterval = (pollingConfig.pollInterval as number) || 30;
+						const maxWaitTime = (pollingConfig.maxWaitTime as number) || 10;
+
+						// Extract job ID from the initial response
+						const jobId = initialResponse.job_id || initialResponse.id;
+						if (!jobId) {
+							throw new NodeOperationError(this.getNode(), 'No job ID returned from API');
+						}
+
+						// Poll until completion and get the final result
+						responseData = await pollJobUntilComplete(this, jobId, pollInterval, maxWaitTime);
+					} else {
+						responseData = initialResponse;
+					}
+
+				} else if (operation === 'generateCarousel' || operation === 'generateCarouselSync') {
 					const templateId = this.getNodeParameter('templateId', i) as string;
 					const output = this.getNodeParameter('output', i) as string;
 					const includeBranding = this.getNodeParameter('includeBranding', i) as boolean;
-					const contentUpdates = this.getNodeParameter('contentUpdates', i) as IDataObject;
-					const introSlide = this.getNodeParameter('introSlide', i) as IDataObject;
-					const slides = this.getNodeParameter('slides', i) as IDataObject;
-					const endingSlide = this.getNodeParameter('endingSlide', i) as IDataObject;
+					const contentUpdatesMode = this.getNodeParameter('contentUpdatesMode', i) as string;
+					const carouselMode = this.getNodeParameter('carouselMode', i) as string;
 
 					const body: IDataObject = {
 						template_id: templateId,
@@ -428,31 +636,85 @@ export class Contentdrips implements INodeType {
 						}
 					}
 
-					// Add content updates
-					if (contentUpdates && contentUpdates.updates) {
-						body.content_update = contentUpdates.updates;
+					// Add content updates based on selected mode
+					if (contentUpdatesMode === 'json') {
+						const contentUpdatesJson = this.getNodeParameter('contentUpdatesJson', i) as string;
+						if (contentUpdatesJson && contentUpdatesJson.trim()) {
+							try {
+								const parsedUpdates = JSON.parse(contentUpdatesJson);
+								if (Array.isArray(parsedUpdates) && parsedUpdates.length > 0) {
+									body.content_update = parsedUpdates;
+								}
+							} catch (error) {
+								throw new NodeOperationError(this.getNode(), `Invalid Content Updates JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+							}
+						}
+					} else {
+						// Form mode
+						const contentUpdates = this.getNodeParameter('contentUpdates', i) as IDataObject;
+						if (contentUpdates && contentUpdates.updates) {
+							body.content_update = contentUpdates.updates;
+						}
 					}
 
-					// Build carousel object
-					const carousel: IDataObject = {};
-					
-					if (Object.keys(introSlide).length > 0) {
-						carousel.intro_slide = introSlide;
-					}
-					
-					if (slides && slides.slide && Array.isArray(slides.slide)) {
-						carousel.slides = slides.slide;
-					}
-					
-					if (Object.keys(endingSlide).length > 0) {
-						carousel.ending_slide = endingSlide;
+					// Build carousel object based on selected mode
+					if (carouselMode === 'json') {
+						const carouselJson = this.getNodeParameter('carouselJson', i) as string;
+						if (carouselJson && carouselJson.trim()) {
+							try {
+								const parsedCarousel = JSON.parse(carouselJson);
+								if (parsedCarousel && typeof parsedCarousel === 'object') {
+									body.carousel = parsedCarousel;
+								}
+							} catch (error) {
+								throw new NodeOperationError(this.getNode(), `Invalid Carousel JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+							}
+						}
+					} else {
+						// Form mode
+						const introSlide = this.getNodeParameter('introSlide', i) as IDataObject;
+						const slides = this.getNodeParameter('slides', i) as IDataObject;
+						const endingSlide = this.getNodeParameter('endingSlide', i) as IDataObject;
+
+						const carousel: IDataObject = {};
+						
+						if (Object.keys(introSlide).length > 0) {
+							carousel.intro_slide = introSlide;
+						}
+						
+						if (slides && slides.slide && Array.isArray(slides.slide)) {
+							carousel.slides = slides.slide;
+						}
+						
+						if (Object.keys(endingSlide).length > 0) {
+							carousel.ending_slide = endingSlide;
+						}
+
+						if (Object.keys(carousel).length > 0) {
+							body.carousel = carousel;
+						}
 					}
 
-					if (Object.keys(carousel).length > 0) {
-						body.carousel = carousel;
-					}
+					// Make the initial API call
+					const initialResponse = await contentdripsApiRequest.call(this, 'POST', '/render?tool=carousel-maker', body);
 
-					responseData = await contentdripsApiRequest.call(this, 'POST', '/render?tool=carousel-maker', body);
+					if (operation === 'generateCarouselSync') {
+						// Get polling configuration
+						const pollingConfig = this.getNodeParameter('pollingConfig', i, {}) as IDataObject;
+						const pollInterval = (pollingConfig.pollInterval as number) || 30;
+						const maxWaitTime = (pollingConfig.maxWaitTime as number) || 10;
+
+						// Extract job ID from the initial response
+						const jobId = initialResponse.job_id || initialResponse.id;
+						if (!jobId) {
+							throw new NodeOperationError(this.getNode(), 'No job ID returned from API');
+						}
+
+						// Poll until completion and get the final result
+						responseData = await pollJobUntilComplete(this, jobId, pollInterval, maxWaitTime);
+					} else {
+						responseData = initialResponse;
+					}
 
 				} else if (operation === 'checkJobStatus') {
 					const jobId = this.getNodeParameter('jobId', i) as string;
