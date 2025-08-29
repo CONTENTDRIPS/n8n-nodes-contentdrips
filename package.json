@@ -24,7 +24,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && npm run copy",
-    "copy": "npx copyfiles -u 1 \"nodes/**/*.png\" dist/",
+    "copy": "npx copyfiles -u 1 \"nodes/**/*.{png,svg}\" dist/",
     "dev": "tsc --watch",
     "lint": "eslint nodes credentials --ext .ts",
     "lintfix": "eslint nodes credentials --ext .ts --fix",
