@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-contentdrips",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "n8n node for Contentdrips API - create carousels and static graphics for social media content automation",
   "keywords": [
     "n8n-community-node-package",
@@ -24,7 +24,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && npm run copy",
-    "copy": "npx copyfiles -u 1 \"nodes/**/*.{png,svg}\" dist/",
+    "copy": "npx copyfiles -u 1 \"nodes/**/*.{png,svg}\" dist/ && cp dist/Contentdrips/*.{png,svg} dist/nodes/Contentdrips/",
     "dev": "tsc --watch",
     "lint": "eslint nodes credentials --ext .ts",
     "lintfix": "eslint nodes credentials --ext .ts --fix",
