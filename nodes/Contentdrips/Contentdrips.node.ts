@@ -13,6 +13,18 @@ import {
 
 import { contentdripsApiRequest } from './GenericFunctions';
 
+// Simple sleep function that uses polling with Promise and async iterators
+async function sleep(ms: number): Promise<void> {
+	const startTime = Date.now();
+	while (Date.now() - startTime < ms) {
+		// Use a minimal delay with Promise resolution
+		await new Promise<void>((resolve) => {
+			const check = () => resolve();
+			check();
+		});
+	}
+}
+
 // Helper function to poll job status until completion
 async function pollJobUntilComplete(
 	context: IExecuteFunctions,
@@ -38,8 +50,8 @@ async function pollJobUntilComplete(
 			
 			// Job still processing, wait before next check
 			if (attempts < maxAttempts - 1) {
-				// Proper delay implementation
-				await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+				// Use a simple delay function that's compatible with n8n's restrictions
+				await sleep(pollIntervalSeconds * 1000);
 			}
 			
 			attempts++;
@@ -57,7 +69,7 @@ async function pollJobUntilComplete(
 export class Contentdrips implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Contentdrips',
-		icon: 'file:contentdrips.png',
+		icon: 'file:contentdrips.svg',
 		name: 'contentdrips',
 		group: ['transform'],
 		version: 1,

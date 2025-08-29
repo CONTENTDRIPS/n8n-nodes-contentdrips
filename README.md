@@ -13,14 +13,44 @@ An n8n community node for the [Contentdrips API](https://app.contentdrips.com) t
 
 ## Installation
 
-### Community Nodes (Recommended)
+### n8n Cloud
 
+For n8n Cloud users:
+
+1. Go to **Settings > Community Nodes** in your n8n Cloud instance
+2. Click **Install a community node**  
+3. Enter `n8n-nodes-contentdrips`
+4. Click **Install**
+
+The node will be automatically installed and available in your workflow editor.
+
+### Self-hosted n8n
+
+For self-hosted installations, you have several options:
+
+#### Option 1: Community Nodes UI (Easiest)
 1. Go to **Settings > Community Nodes** in your n8n instance
 2. Click **Install a community node**
 3. Enter `n8n-nodes-contentdrips`
 4. Click **Install**
 
-### Manual Installation
+#### Option 2: Docker Compose
+
+Add the following to your `docker-compose.yml` environment variables:
+```yaml
+environment:
+  - NODE_FUNCTION_ALLOW_EXTERNAL=*
+```
+
+Then modify your Dockerfile or create a custom image:
+```dockerfile
+FROM n8nio/n8n:latest
+USER root
+RUN npm install -g n8n-nodes-contentdrips
+USER node
+```
+
+#### Option 3: Manual Installation
 
 ```bash
 # Navigate to your n8n installation directory
@@ -28,6 +58,8 @@ cd ~/.n8n
 
 # Install the node
 npm install n8n-nodes-contentdrips
+
+# Restart n8n
 ```
 
 ## Prerequisites

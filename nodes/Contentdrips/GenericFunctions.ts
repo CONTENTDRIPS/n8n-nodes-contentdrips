@@ -18,10 +18,12 @@ export async function contentdripsApiRequest(
 	
 	const credentials = await this.getCredentials('contentdripsApi');
 	
-	// Debug logging
-	console.log('DEBUG - Credentials retrieved:', credentials ? 'YES' : 'NO');
-	console.log('DEBUG - API Token present:', credentials?.apiToken ? 'YES' : 'NO');
-	console.log('DEBUG - API Token length:', credentials?.apiToken ? String(credentials.apiToken).length : 0);
+	// Debug logging - using n8n logger
+	this.getLogger().debug('Contentdrips API credentials check', {
+		credentialsRetrieved: credentials ? true : false,
+		apiTokenPresent: credentials?.apiToken ? true : false,
+		apiTokenLength: credentials?.apiToken ? String(credentials.apiToken).length : 0,
+	});
 
 	const url = uri || `https://generate.contentdrips.com${resource}`;
 
@@ -38,11 +40,13 @@ export async function contentdripsApiRequest(
 		json: true,
 	};
 
-	console.log('DEBUG - Request URL:', url);
-	console.log('DEBUG - Request method:', method);
-	console.log('DEBUG - Authorization header:', options.headers?.Authorization ? 'SET' : 'NOT SET');
-	console.log('DEBUG - Request body:', JSON.stringify(body, null, 2));
-	console.log('DEBUG - Body keys:', Object.keys(body || {}));
+	this.getLogger().debug('Contentdrips API request details', {
+		url,
+		method,
+		authHeaderPresent: options.headers?.Authorization ? true : false,
+		bodyKeys: Object.keys(body || {}),
+		// Don't log full body as it may contain sensitive data
+	});
 
 	try {
 		return await this.helpers.httpRequest(options);
@@ -81,11 +85,11 @@ export async function contentdripsApiRequest(
 				errorMessage = `${statusCode} ${statusText}`;
 			}
 			
-			console.log('DEBUG - API Error Response:', JSON.stringify({
+			this.getLogger().debug('Contentdrips API error response', {
 				status: statusCode,
 				statusText,
-				data: apiErrorDetails,
-			}, null, 2));
+				hasErrorData: apiErrorDetails ? true : false,
+			});
 			
 		} else if (error.message) {
 			// Non-HTTP error (network, etc.)
