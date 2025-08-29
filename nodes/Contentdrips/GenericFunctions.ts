@@ -19,7 +19,7 @@ export async function contentdripsApiRequest(
 	const credentials = await this.getCredentials('contentdripsApi');
 	
 	// Debug logging - using n8n logger
-	this.getLogger().debug('Contentdrips API credentials check', {
+	this.logger.debug('Contentdrips API credentials check', {
 		credentialsRetrieved: credentials ? true : false,
 		apiTokenPresent: credentials?.apiToken ? true : false,
 		apiTokenLength: credentials?.apiToken ? String(credentials.apiToken).length : 0,
@@ -40,7 +40,7 @@ export async function contentdripsApiRequest(
 		json: true,
 	};
 
-	this.getLogger().debug('Contentdrips API request details', {
+	this.logger.debug('Contentdrips API request details', {
 		url,
 		method,
 		authHeaderPresent: options.headers?.Authorization ? true : false,
@@ -85,7 +85,7 @@ export async function contentdripsApiRequest(
 				errorMessage = `${statusCode} ${statusText}`;
 			}
 			
-			this.getLogger().debug('Contentdrips API error response', {
+			this.logger.debug('Contentdrips API error response', {
 				status: statusCode,
 				statusText,
 				hasErrorData: apiErrorDetails ? true : false,
