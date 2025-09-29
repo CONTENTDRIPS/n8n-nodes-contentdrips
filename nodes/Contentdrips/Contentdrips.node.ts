@@ -9,21 +9,11 @@ import {
 	INodeTypeDescription,
 	NodeConnectionType,
 	NodeOperationError,
+	sleep,
 } from 'n8n-workflow';
 
 import { contentdripsApiRequest } from './GenericFunctions';
 
-// Simple sleep function that uses polling with Promise and async iterators
-async function sleep(ms: number): Promise<void> {
-	const startTime = Date.now();
-	while (Date.now() - startTime < ms) {
-		// Use a minimal delay with Promise resolution
-		await new Promise<void>((resolve) => {
-			const check = () => resolve();
-			check();
-		});
-	}
-}
 
 // Helper function to poll job status until completion
 async function pollJobUntilComplete(
@@ -73,7 +63,7 @@ export class Contentdrips implements INodeType {
 		name: 'contentdrips',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"]}}',
+		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
 		description: 'Create carousels and static graphics using the Contentdrips API',
 		defaults: {
 			name: 'Contentdrips',
@@ -88,49 +78,106 @@ export class Contentdrips implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Operation',
-				name: 'operation',
+				displayName: 'Resource',
+				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Generate Graphic',
+						name: 'Graphic',
+						value: 'graphic',
+						description: 'Generate static graphics',
+					},
+					{
+						name: 'Carousel',
+						value: 'carousel',
+						description: 'Generate carousel content',
+					},
+					{
+						name: 'Job',
+						value: 'job',
+						description: 'Check job status and retrieve results',
+					},
+				],
+				default: 'graphic',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['graphic'],
+					},
+				},
+				options: [
+					{
+						name: 'Generate',
 						value: 'generateGraphic',
 						description: 'Start creating a graphic and get a job ID to check later',
 						action: 'Start creating a graphic and get a job ID to check later',
 					},
 					{
-						name: '1-Click Generate Graphic',
+						name: '1-Click Generate',
 						value: 'generateGraphicSync',
 						description: 'Create a graphic in one step - we handle everything automatically',
 						action: 'Create a graphic in one step - we handle everything automatically',
 					},
+				],
+				default: 'generateGraphic',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['carousel'],
+					},
+				},
+				options: [
 					{
-						name: 'Generate Carousel',
+						name: 'Generate',
 						value: 'generateCarousel',
 						description: 'Start creating a carousel and get a job ID to check later',
 						action: 'Start creating a carousel and get a job ID to check later',
 					},
 					{
-						name: '1-Click Generate Carousel',
+						name: '1-Click Generate',
 						value: 'generateCarouselSync',
 						description: 'Create a carousel in one step - we handle everything automatically',
 						action: 'Create a carousel in one step - we handle everything automatically',
 					},
+				],
+				default: 'generateCarousel',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['job'],
+					},
+				},
+				options: [
 					{
-						name: 'Check Job Status',
+						name: 'Check Status',
 						value: 'checkJobStatus',
 						description: 'Check the status of a processing job',
 						action: 'Check the status of a processing job',
 					},
 					{
-						name: 'Get Job Result',
+						name: 'Get Result',
 						value: 'getJobResult',
 						description: 'Get the result of a completed job',
 						action: 'Get the result of a completed job',
 					},
 				],
-				default: 'generateGraphic',
+				default: 'checkJobStatus',
 			},
 
 			// Template ID (for both graphic and carousel)
@@ -140,7 +187,7 @@ export class Contentdrips implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 					},
 				},
 				default: '',
@@ -156,7 +203,7 @@ export class Contentdrips implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 					},
 				},
 				options: [
@@ -180,6 +227,7 @@ export class Contentdrips implements INodeType {
 				type: 'collection',
 				displayOptions: {
 					show: {
+						resource: ['graphic', 'carousel'],
 						operation: ['generateGraphicSync', 'generateCarouselSync'],
 					},
 				},
@@ -218,7 +266,7 @@ export class Contentdrips implements INodeType {
 				type: 'boolean',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 					},
 				},
 				default: false,
@@ -232,7 +280,7 @@ export class Contentdrips implements INodeType {
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 						includeBranding: [true],
 					},
 				},
@@ -285,7 +333,7 @@ export class Contentdrips implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 					},
 				},
 				options: [
@@ -309,7 +357,7 @@ export class Contentdrips implements INodeType {
 				type: 'fixedCollection',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 						contentUpdatesMode: ['form'],
 					},
 				},
@@ -368,7 +416,7 @@ export class Contentdrips implements INodeType {
 				type: 'json',
 				displayOptions: {
 					show: {
-						operation: ['generateGraphic', 'generateCarousel', 'generateGraphicSync', 'generateCarouselSync'],
+						resource: ['graphic', 'carousel'],
 						contentUpdatesMode: ['json'],
 					},
 				},
@@ -384,7 +432,7 @@ export class Contentdrips implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel', 'generateCarouselSync'],
+						resource: ['carousel'],
 					},
 				},
 				options: [
@@ -408,7 +456,7 @@ export class Contentdrips implements INodeType {
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel', 'generateCarouselSync'],
+						resource: ['carousel'],
 						carouselMode: ['form'],
 					},
 				},
@@ -446,7 +494,7 @@ export class Contentdrips implements INodeType {
 				type: 'fixedCollection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel', 'generateCarouselSync'],
+						resource: ['carousel'],
 						carouselMode: ['form'],
 					},
 				},
@@ -493,7 +541,7 @@ export class Contentdrips implements INodeType {
 				type: 'collection',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel', 'generateCarouselSync'],
+						resource: ['carousel'],
 						carouselMode: ['form'],
 					},
 				},
@@ -531,7 +579,7 @@ export class Contentdrips implements INodeType {
 				type: 'json',
 				displayOptions: {
 					show: {
-						operation: ['generateCarousel', 'generateCarouselSync'],
+						resource: ['carousel'],
 						carouselMode: ['json'],
 					},
 				},
@@ -547,7 +595,7 @@ export class Contentdrips implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						operation: ['checkJobStatus', 'getJobResult'],
+						resource: ['job'],
 					},
 				},
 				default: '',
@@ -562,13 +610,14 @@ export class Contentdrips implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
+		const resource = this.getNodeParameter('resource', 0) as string;
 		const operation = this.getNodeParameter('operation', 0) as string;
 
 		for (let i = 0; i < items.length; i++) {
 			try {
 				let responseData: any;
 
-				if (operation === 'generateGraphic' || operation === 'generateGraphicSync') {
+				if (resource === 'graphic') {
 					const templateId = this.getNodeParameter('templateId', i) as string;
 					const output = this.getNodeParameter('output', i) as string;
 					const includeBranding = this.getNodeParameter('includeBranding', i) as boolean;
@@ -629,7 +678,7 @@ export class Contentdrips implements INodeType {
 						responseData = initialResponse;
 					}
 
-				} else if (operation === 'generateCarousel' || operation === 'generateCarouselSync') {
+				} else if (resource === 'carousel') {
 					const templateId = this.getNodeParameter('templateId', i) as string;
 					const output = this.getNodeParameter('output', i) as string;
 					const includeBranding = this.getNodeParameter('includeBranding', i) as boolean;
@@ -729,16 +778,19 @@ export class Contentdrips implements INodeType {
 						responseData = initialResponse;
 					}
 
-				} else if (operation === 'checkJobStatus') {
+				} else if (resource === 'job') {
 					const jobId = this.getNodeParameter('jobId', i) as string;
-					responseData = await contentdripsApiRequest.call(this, 'GET', `/job/${jobId}/status`);
-
-				} else if (operation === 'getJobResult') {
-					const jobId = this.getNodeParameter('jobId', i) as string;
-					responseData = await contentdripsApiRequest.call(this, 'GET', `/job/${jobId}/result`);
+					
+					if (operation === 'checkJobStatus') {
+						responseData = await contentdripsApiRequest.call(this, 'GET', `/job/${jobId}/status`);
+					} else if (operation === 'getJobResult') {
+						responseData = await contentdripsApiRequest.call(this, 'GET', `/job/${jobId}/result`);
+					} else {
+						throw new NodeOperationError(this.getNode(), `Unknown job operation: ${operation}`);
+					}
 
 				} else {
-					throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
+					throw new NodeOperationError(this.getNode(), `Unknown resource: ${resource}`);
 				}
 
 				returnData.push({
