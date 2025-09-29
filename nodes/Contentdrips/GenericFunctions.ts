@@ -16,13 +16,13 @@ export async function contentdripsApiRequest(
 	headers: IDataObject = {},
 ): Promise<any> {
 	
-	const credentials = await this.getCredentials('contentdripsApi');
-	
 	// Debug logging - using n8n logger
-	this.logger.debug('Contentdrips API credentials check', {
-		credentialsRetrieved: credentials ? true : false,
-		apiTokenPresent: credentials?.apiToken ? true : false,
-		apiTokenLength: credentials?.apiToken ? String(credentials.apiToken).length : 0,
+	this.logger.debug('Contentdrips API request details', {
+		method,
+		resource,
+		bodyKeys: Object.keys(body || {}),
+		hasCustomHeaders: Object.keys(headers).length > 0,
+		// Don't log full body as it may contain sensitive data
 	});
 
 	const url = uri || `https://generate.contentdrips.com${resource}`;
@@ -30,7 +30,6 @@ export async function contentdripsApiRequest(
 	const options: IHttpRequestOptions = {
 		headers: {
 			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${credentials?.apiToken}`,
 			...headers,
 		},
 		method,
@@ -40,16 +39,12 @@ export async function contentdripsApiRequest(
 		json: true,
 	};
 
-	this.logger.debug('Contentdrips API request details', {
-		url,
-		method,
-		authHeaderPresent: options.headers?.Authorization ? true : false,
-		bodyKeys: Object.keys(body || {}),
-		// Don't log full body as it may contain sensitive data
-	});
-
 	try {
-		return await this.helpers.httpRequest(options);
+		return await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'contentdripsApi',
+			options,
+		);
 	} catch (error: any) {
 		// Enhanced error handling to show actual API error details
 		let errorMessage = 'Unknown error';

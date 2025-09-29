@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-contentdrips",
-  "version": "1.2.3",
-  "description": "n8n node for Contentdrips API - create carousels and static graphics for social media content automation",
+  "version": "1.2.5",
+  "description": "n8n node for Contentdrips API - create carousels and graphics for social media content automation",
   "keywords": [
     "n8n-community-node-package",
     "contentdrips",
