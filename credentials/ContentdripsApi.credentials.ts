@@ -1,5 +1,4 @@
 import {
-    IAuthenticateGeneric,
     ICredentialTestRequest,
     ICredentialType,
     INodeProperties,
@@ -20,16 +19,6 @@ export class ContentdripsApi implements ICredentialType {
             description: 'Your Contentdrips API token. Get it from https://app.contentdrips.com/api-management',
         },
     ];
-
-    // This defines how the credential should be used in HTTP requests
-    authenticate: IAuthenticateGeneric = {
-        type: 'generic',
-        properties: {
-            headers: {
-                'Authorization': '=Bearer {{ $credentials.apiToken }}',
-            },
-        },
-    };
 
     // Test the credential by calling the validation endpoint
     test: ICredentialTestRequest = {

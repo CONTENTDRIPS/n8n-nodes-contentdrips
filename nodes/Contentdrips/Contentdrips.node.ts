@@ -7,7 +7,6 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	NodeConnectionType,
 	NodeOperationError,
 	sleep,
 } from 'n8n-workflow';
@@ -68,8 +67,8 @@ export class Contentdrips implements INodeType {
 		defaults: {
 			name: 'Contentdrips',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+	inputs: ['main'],
+	outputs: ['main'],
 		credentials: [
 			{
 				name: 'contentdripsApi',
