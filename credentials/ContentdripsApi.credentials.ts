@@ -1,4 +1,5 @@
 import {
+    IAuthenticateGeneric,
     ICredentialTestRequest,
     ICredentialType,
     INodeProperties,
@@ -20,6 +21,16 @@ export class ContentdripsApi implements ICredentialType {
         },
     ];
 
+    // Define how to authenticate API requests
+    authenticate: IAuthenticateGeneric = {
+        type: 'generic',
+        properties: {
+            headers: {
+                'Authorization': '=Bearer {{$credentials.apiToken}}',
+            },
+        },
+    };
+
     // Test the credential by calling the validation endpoint
     test: ICredentialTestRequest = {
         request: {
@@ -28,9 +39,6 @@ export class ContentdripsApi implements ICredentialType {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: {
-                token: '={{ $credentials.apiToken }}',
             },
         },
     };
